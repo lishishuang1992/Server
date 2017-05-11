@@ -79,7 +79,7 @@ def homeData(request):
             for obj in data:
                 aboutBall = models.about_ball.objects.filter(ball_id=obj.ball_ID)
                 userBall = models.ball_user.objects.filter(user_id=aboutBall[0].user_id)
-                dictData = {'user_name':userBall[0].user_name,'image':userBall[0].image,'current_time':str(obj.current_time),'ball_ID':obj.ball_ID,'ball_object':obj.ball_object,'money':obj.money,'project':obj.project,'ball_format':obj.ball_format,'place':obj.place,'num_people':obj.num_people,'current_people':obj.current_people}
+                dictData = {'user_name':userBall[0].user_name,'image':userBall[0].image,'current_time':str(obj.current_time),'ball_ID':obj.ball_ID,'ball_object':obj.ball_object,'money':obj.money,'project':obj.project,'ball_format':obj.ball_format,'place':obj.place,'num_people':obj.num_people,'current_people':obj.current_people,'introduction':obj.introduction}
                 listData.append(dictData)
             listData.sort(key=lambda x: x['current_time'].split('-'), reverse=True)
             listData.sort(key=lambda x: x['current_time'].split(':'), reverse=True)
@@ -212,6 +212,35 @@ def ballEnroll(request):
     x = "报名成功"
     message = x.decode("UTF-8")
     data = {'status': '1006', 'message': message}
+    return HttpResponse(json.dumps(data), content_type="application/json")
+
+
+@csrf_exempt
+def searchBallEnroll(request):
+    request.method = 'POST'
+    received_json_data = json.loads(request.body)
+    ball_id = received_json_data['ball_id']
+    try:
+        ball_enroll = models.ball_enroll.objects.filter(ball_id=ball_id)
+        if ball_enroll:
+            listData = []
+            for obj in ball_enroll:
+                userBall = models.ball_user.objects.get(user_id=obj.user_id)
+                dictData = {"user_id":obj.user_id,'status': obj.status, 'image': userBall.image,'user_name':userBall.user_name}
+                listData.append(dictData)
+        else:
+            x = "无人员报名"
+            message = x.decode("UTF-8")
+            data = {'status': '1008', 'message': message}
+            return HttpResponse(json.dumps(data), content_type="application/json")
+    except TransactionManagementError:
+        x = "失败"
+        message = x.decode("UTF-8")
+        data = {'status': '1005', 'message': message}
+        return HttpResponse(json.dumps(data), content_type="application/json")
+    x = "报名人员查询成功"
+    message = x.decode("UTF-8")
+    data = {'status': '1006', 'message': message ,'result':listData}
     return HttpResponse(json.dumps(data), content_type="application/json")
 
 
