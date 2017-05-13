@@ -17,6 +17,7 @@ urlpatterns = [
     url(r'^resertBallTable',views.resertBallTable),
     url(r'^resertBallMessage', views.resertBallMessage),
     url(r'^ballEnroll', views.ballEnroll),
+    url(r'^deleteBallMessage', views.deleteBallMessage),
     url(r'^searchBallEnroll', views.searchBallEnroll),
     url(r'^cancelBallEnroll', views.cancelBallEnroll),
     url(r'^allAboutBall', views.allAboutBall),

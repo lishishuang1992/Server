@@ -143,8 +143,20 @@ def homeData(request):
 @csrf_exempt
 def allBallMessage(request):
     request.method = 'POST'
-    data = models.ball_message.objects.all()
+    received_json_data = json.loads(request.body)
+    user_id = received_json_data['user_id']
+    if user_id:
+        aboutBall = models.about_ball.objects.filter(user_id = user_id)
+        messageList = []
+        for obj in aboutBall:
+            if obj.ballMessage_id:
+                messageData = models.ball_message.objects.get(message_id = obj.ballMessage_id)
+                messageList.append(messageData)
+    else:
+        data = models.ball_message.objects.all()
     listData = []
+    if user_id:
+        data = messageList
     if data:
         for obj in data:
             aboutBall = models.about_ball.objects.filter(ballMessage_id=obj.message_id)
@@ -361,8 +373,9 @@ def deleteBallMessage(request):
     user_id = received_json_data['user_id']
     message_id = received_json_data['message_id']
     try:
-        models.ball_message.objects.filter(message_id=message_id).delete()
-        models.zan_message.objects.filter(message_id=message_id).delete()
+        models.ball_message.objects.filter(message_id = message_id).delete()
+        models.zan_message.objects.filter(message_id = message_id).delete()
+        models.about_ball.objects.filter(ballMessage_id = message_id,user_id = user_id).delete()
     except TransactionManagementError:
         x = "失败"
         message = x.decode("UTF-8")
