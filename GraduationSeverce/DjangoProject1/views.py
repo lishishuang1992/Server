@@ -28,9 +28,9 @@ def login(request):
     userPassword = models.ball_user.objects.only('password').get(user_name = getUserName).password
     if userPassword == getPassWord:
         x = "登录成功"
-        obj = models.ball_user.objects.filter(user_name = getUserName,password=getPassWord)
+        obj = models.ball_user.objects.get(user_name = getUserName,password = getPassWord)
         message = x.decode("UTF-8")
-        data = {'status': '1006', 'message': message,'user_id':obj.user_id}
+        data = {'status': '1006', 'message': message,'user_id':obj.user_id,'image':obj.image}
         return HttpResponse(json.dumps(data), content_type="application/json")
     else:
         x = "密码错误"
@@ -48,13 +48,42 @@ def register(request):
         user_id = ''.join(random.sample(string.ascii_letters + string.digits, 8))
         userMesssage = models.ball_user(user_name=getUserName, password=getPassWord,user_id=user_id)
         userMesssage.save()
+        defaultImagePath = models.ball_user.objects.get(user_id=user_id)
         x = "注册成功"
         message = x.decode("UTF-8")
-        data = {'status': '1006', 'message': message,'user_id':user_id}
+        data = {'status': '1006', 'message': message,'user_id':user_id,'image':defaultImagePath.image}
         return HttpResponse(json.dumps(data), content_type="application/json")
     x = "用户名已经存在"
     message = x.decode("UTF-8")
     data = {'status': '1005', 'message': message}
+    return HttpResponse(json.dumps(data), content_type="application/json")
+
+@csrf_exempt
+def postUserImage(request):
+    request.method = 'POST'
+    received_json_data = json.loads(request.body)
+    user_id = received_json_data['user_id']
+    imageStr = received_json_data['image']
+    imgdata = base64.b64decode(imageStr)
+    num_Image = random.randint(10000000, 99999999)
+    path = "%s/media/userImage/%d.jpg" % (os.path.dirname(os.path.dirname(__file__)), num_Image)
+    file = open(path, "wb")
+    file.write(imgdata)
+    file.flush()
+    file.close()
+    try:
+        ballUpdate = models.ball_user.objects.get(user_id=user_id)
+        imagePath =  "userImage/%d.jpg" %(num_Image)
+        ballUpdate.image = imagePath
+        ballUpdate.save()
+    except ObjectDoesNotExist:
+        x = "用户id错误"
+        message = x.decode("UTF-8")
+        data = {'status': '1005', 'message': message}
+        return HttpResponse(json.dumps(data), content_type="application/json")
+    x = "上传成功"
+    message = x.decode("UTF-8")
+    data = {'status': '1006', 'message': message}
     return HttpResponse(json.dumps(data), content_type="application/json")
 
 
@@ -65,22 +94,34 @@ def homeData(request):
     project = received_json_data['project']
     ball_object = received_json_data['ball_object']
     place = received_json_data['place']
+    user_id = received_json_data['user_id']
     try:
         if project:
-            data = models.ball_table.objects.filter(project=project)
+            data = models.ball_table.objects.filter(project = project)
         elif ball_object:
-            data = models.ball_table.objects.filter(ball_object=ball_object)
+            data = models.ball_table.objects.filter(ball_object = ball_object)
         elif place:
-            data = models.ball_table.objects.filter(place=place)
+            data = models.ball_table.objects.filter(place = place)
+        elif user_id:
+            data = models.about_ball.objects.filter(user_id=user_id)
         else:
             data = models.ball_table.objects.all()
         if data:
             listData = []
-            for obj in data:
-                aboutBall = models.about_ball.objects.filter(ball_id=obj.ball_ID)
-                userBall = models.ball_user.objects.filter(user_id=aboutBall[0].user_id)
-                dictData = {'user_name':userBall[0].user_name,'image':userBall[0].image,'current_time':str(obj.current_time),'ball_ID':obj.ball_ID,'ball_object':obj.ball_object,'money':obj.money,'project':obj.project,'ball_format':obj.ball_format,'place':obj.place,'num_people':obj.num_people,'current_people':obj.current_people,'introduction':obj.introduction}
-                listData.append(dictData)
+            if user_id:
+                for obj in data:
+                    userBall = models.ball_table.objects.get(ball_ID=obj.ball_id)
+                    dictData = { 'ball_ID':userBall.ball_ID,'current_time': str(userBall.current_time), 'ball_object': userBall.ball_object,
+                        'money': userBall.money, 'project': userBall.project, 'ball_format': userBall.ball_format, 'place': userBall.place,
+                        'num_people': userBall.num_people, 'current_people': userBall.current_people,
+                        'introduction': userBall.introduction}
+                    listData.append(dictData)
+            else:
+                for obj in data:
+                    aboutBall = models.about_ball.objects.filter(ball_id=obj.ball_ID)
+                    userBall = models.ball_user.objects.filter(user_id=aboutBall[0].user_id)
+                    dictData = {'user_name':userBall[0].user_name,'image':userBall[0].image,'current_time':str(obj.current_time),'ball_ID':obj.ball_ID,'ball_object':obj.ball_object,'money':obj.money,'project':obj.project,'ball_format':obj.ball_format,'place':obj.place,'num_people':obj.num_people,'current_people':obj.current_people,'introduction':obj.introduction}
+                    listData.append(dictData)
             listData.sort(key=lambda x: x['current_time'].split('-'), reverse=True)
             listData.sort(key=lambda x: x['current_time'].split(':'), reverse=True)
             x = "查询到数据"
@@ -110,10 +151,11 @@ def allBallMessage(request):
             userBall = models.ball_user.objects.filter(user_id=aboutBall[0].user_id)
             zanData = models.zan_message.objects.filter(message_id=obj.message_id)
             zanUserIdList = []
-            for zanObj in zanData:
-                zanUser = models.ball_user.objects.filter(user_id=zanObj.user_id)
-                zanDict = {'user_id': zanObj.user_id,'user_name':zanUser[0].user_name}
-                zanUserIdList.append(zanDict)
+            if zanData:
+                for zanObj in zanData:
+                    zanUser = models.ball_user.objects.filter(user_id=zanObj.user_id)
+                    zanDict = {'user_id': zanObj.user_id,'user_name':zanUser[0].user_name}
+                    zanUserIdList.append(zanDict)
             dictData = {'user_id':userBall[0].user_id,'user_image':userBall[0].image,'user_name':userBall[0].user_name,'message_id':obj.message_id,'image':obj.image,'num':obj.num,'message':obj.message,'current_time':str(obj.current_time),'zan_userId':zanUserIdList}
             listData.append(dictData)
         listData.sort(key=lambda x: x['current_time'].split('-'), reverse=True)
@@ -190,8 +232,6 @@ def resertBallMessage(request):
     message = x.decode("UTF-8")
     data = {'status': '1006', 'message': message}
     return HttpResponse(json.dumps(data), content_type="application/json")
-
-
 
 
 
@@ -308,7 +348,7 @@ def deleteAboutBall(request):
     except TransactionManagementError:
         x = "失败"
         message = x.decode("UTF-8")
-        data = {'status': '1004', 'message': message}
+        data = {'status': '1005', 'message': message}
         return HttpResponse(json.dumps(data), content_type="application/json")
     x = "删除成功"
     data = {'status': '1006', 'message': x.decode("UTF-8")}
@@ -339,13 +379,14 @@ def auditAbout(request):
     ball_id = received_json_data['ball_id']
     audio_status = received_json_data['audio_status']
     try:
-        audioAbout = models.ball_enroll.objects.filter(user_id=user_id,ball_id=ball_id)
+        audioAbout = models.ball_enroll.objects.get(user_id=user_id,ball_id=ball_id)
         if audio_status == "4":
             audioAbout.delete()
             x = "删除成功"
         else:
+            print (audio_status)
             audioAbout.status = audio_status
-            audioAbout.update()
+            audioAbout.save()
             x = "审核成功"
     except TransactionManagementError:
         x = "失败"

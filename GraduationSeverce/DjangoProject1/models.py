@@ -10,7 +10,7 @@ class ball_user(models.Model):
     user_id = models.CharField(max_length=20)
     user_name = models.CharField(max_length=100)
     password = models.CharField(max_length=100)
-    image = models.CharField(max_length=100,null=True)
+    image = models.CharField(max_length=100,default='userImage/default_face.jpg')
 
 class ball_table(models.Model):
     ball_ID = models.CharField(max_length=20)
@@ -29,7 +29,7 @@ class ball_table(models.Model):
 class ball_enroll(models.Model):
     ball_id = models.CharField(max_length=20)
     user_id = models.CharField(max_length=20)
-    status = models.CharField(max_length=10)
+    status = models.CharField(max_length=10,default='1')
 
 
 class about_ball(models.Model):

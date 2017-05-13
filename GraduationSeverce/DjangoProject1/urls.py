@@ -21,7 +21,8 @@ urlpatterns = [
     url(r'^cancelBallEnroll', views.cancelBallEnroll),
     url(r'^allAboutBall', views.allAboutBall),
     url(r'^deleteAboutBall', views.deleteAboutBall),
-    url(r'^auditAbout', views.auditAbout)
+    url(r'^auditAbout', views.auditAbout),
+    url(r'^postUserImage', views.postUserImage)
 
     #url(r'^(?P<view>\w*)/(?P<index>\d*)', views.List, {'view': 'list','id':1})
 ]
