@@ -24,7 +24,9 @@ urlpatterns = [
     url(r'^deleteAboutBall', views.deleteAboutBall),
     url(r'^auditAbout', views.auditAbout),
     url(r'^postUserImage', views.postUserImage),
-    url(r'^deleteBallEnroll', views.deleteBallEnroll)
+    url(r'^deleteBallEnroll', views.deleteBallEnroll),
+    url(r'^zanMessage', views.zanMessage),
+    url(r'^canleZanMessage', views.canleZanMessage)
 
     #url(r'^(?P<view>\w*)/(?P<index>\d*)', views.List, {'view': 'list','id':1})
 ]

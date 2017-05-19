@@ -449,10 +449,10 @@ def zanMessage(request):
     user_id = received_json_data['user_id']
     message_id = received_json_data['message_id']
     try:
-        ball_Message = models.ball_message.objects.filter(message_id=message_id)
+        ball_Message = models.ball_message.objects.get(message_id=message_id)
         if ball_Message:
             ball_Message.num = ball_Message.num +1
-            ball_Message.update()
+            ball_Message.save()
             models.zan_message(message_id=message_id, user_id=user_id).save()
             x = "点赞成功"
             data = {'status': '1006', 'message': x.decode("UTF-8")}
@@ -470,17 +470,17 @@ def zanMessage(request):
     data = {'status': '1004', 'message': message}
     return HttpResponse(json.dumps(data), content_type="application/json")
 
-
+@csrf_exempt
 def canleZanMessage(request):
     received_json_data = json.loads(request.body)
     user_id = received_json_data['user_id']
     message_id = received_json_data['message_id']
     try:
-        ball_Message = models.ball_message.objects.filter(message_id=message_id)
+        ball_Message = models.ball_message.objects.get(message_id=message_id)
         if ball_Message:
             ball_Message.num = ball_Message.num - 1
-            ball_Message.update()
-            models.zan_message(message_id=message_id, user_id=user_id).delete()
+            ball_Message.save()
+            models.zan_message.objects.get(message_id=message_id, user_id=user_id).delete()
             x = "取消点赞成功"
             data = {'status': '1006', 'message': x.decode("UTF-8")}
         else:
