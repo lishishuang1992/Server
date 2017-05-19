@@ -110,12 +110,13 @@ def homeData(request):
             listData = []
             if user_id:
                 for obj in data:
-                    userBall = models.ball_table.objects.get(ball_ID=obj.ball_id)
-                    dictData = { 'ball_ID':userBall.ball_ID,'current_time': str(userBall.current_time), 'ball_object': userBall.ball_object,
-                        'money': userBall.money, 'project': userBall.project, 'ball_format': userBall.ball_format, 'place': userBall.place,
-                        'num_people': userBall.num_people, 'current_people': userBall.current_people,
-                        'introduction': userBall.introduction}
-                    listData.append(dictData)
+                    userBall = models.ball_table.objects.filter(ball_ID=obj.ball_id)
+                    if userBall:
+                        dictData = { 'ball_ID':userBall[0].ball_ID,'current_time': str(userBall[0].current_time), 'ball_object': userBall[0].ball_object,
+                            'money': userBall[0].money, 'project': userBall[0].project, 'ball_format': userBall[0].ball_format, 'place': userBall[0].place,
+                            'num_people': userBall[0].num_people, 'current_people': userBall[0].current_people,
+                            'introduction': userBall[0].introduction}
+                        listData.append(dictData)
             else:
                 for obj in data:
                     aboutBall = models.about_ball.objects.filter(ball_id=obj.ball_ID)
@@ -254,8 +255,18 @@ def ballEnroll(request):
     ball_id = received_json_data['ball_id']
     user_id = received_json_data['user_id']
     try:
-        ball_enroll = models.ball_enroll(ball_id=ball_id, user_id=user_id)
-        ball_enroll.save()
+        ball_table = models.ball_table.objects.get(ball_ID=ball_id)
+        if ball_table.current_people < ball_table.num_people:
+            ball_enroll = models.ball_enroll(ball_id=ball_id, user_id=user_id)
+            ball_enroll.save()
+            ball_table = models.ball_table.objects.get(ball_ID = ball_id)
+            ball_table.current_people = ball_table.current_people + 1
+            ball_table.save()
+        else:
+            x = "名额已满"
+            message = x.decode("UTF-8")
+            data = {'status': '1008', 'message': message}
+            return HttpResponse(json.dumps(data), content_type="application/json")
     except TransactionManagementError:
         x = "报名失败"
         message = x.decode("UTF-8")
@@ -305,6 +316,9 @@ def cancelBallEnroll(request):
     try:
         ball_enroll = models.ball_enroll.objects.filter(ball_id=ball_id,user_id=user_id)
         ball_enroll.delete()
+        ball_table = models.ball_table.objects.get(ball_ID=ball_id)
+        ball_table.current_people = ball_table.current_people - 1
+        ball_table.save()
     except TransactionManagementError:
         x = "取消失败"
         message = x.decode("UTF-8")
@@ -367,6 +381,23 @@ def deleteAboutBall(request):
     return HttpResponse(json.dumps(data), content_type="application/json")
 
 @csrf_exempt
+def deleteBallEnroll(request):
+    request.method = 'POST'
+    received_json_data = json.loads(request.body)
+    user_id = received_json_data['user_id']
+    ball_id = received_json_data['ball_id']
+    try:
+        models.ball_enroll.objects.filter(user_id=user_id,ball_id=ball_id).delete()
+    except TransactionManagementError:
+        x = "失败"
+        message = x.decode("UTF-8")
+        data = {'status': '1005', 'message': message}
+        return HttpResponse(json.dumps(data), content_type="application/json")
+    x = "删除成功"
+    data = {'status': '1006', 'message': x.decode("UTF-8")}
+    return HttpResponse(json.dumps(data), content_type="application/json")
+
+@csrf_exempt
 def deleteBallMessage(request):
     request.method = 'POST'
     received_json_data = json.loads(request.body)
@@ -396,6 +427,9 @@ def auditAbout(request):
         if audio_status == "4":
             audioAbout.delete()
             x = "删除成功"
+            ball_table = models.ball_table.objects.get(ball_ID=ball_id)
+            ball_table.current_people = ball_table.current_people - 1
+            ball_table.save()
         else:
             print (audio_status)
             audioAbout.status = audio_status
